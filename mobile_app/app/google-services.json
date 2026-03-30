@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "665095266572",
+    "project_id": "fire-app-3ea13",
+    "storage_bucket": "fire-app-3ea13.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:665095266572:android:f30977e1160a89f9786929",
+        "android_client_info": {
+          "package_name": "hr.ferit.josipnovak.mobile_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC2LVnshWrnmhUImqFxF0gnX2JO6oL8Hr4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
