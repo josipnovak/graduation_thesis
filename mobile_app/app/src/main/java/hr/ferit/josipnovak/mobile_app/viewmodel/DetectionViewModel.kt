@@ -78,7 +78,7 @@ class DetectionViewModel : ViewModel() {
                     .build()
 
                 val request = Request.Builder()
-                    .url("http://192.168.65.198:8000/detect")
+                    .url("http://192.168.0.4:8000/detect")
                     .post(requestBody)
                     .build()
 

@@ -47,7 +47,7 @@ async def detect_fire(file: UploadFile = File(...)):
         if len(prediction.shape) == 3:
             prediction = prediction[:, :, 0]
 
-        threshold_value = 0.001
+        threshold_value = 0.035
         prediction_resized = cv2.resize(prediction, (w, h), interpolation=cv2.INTER_LINEAR)
         
         mask_final = (prediction_resized > threshold_value).astype(np.uint8) * 255
