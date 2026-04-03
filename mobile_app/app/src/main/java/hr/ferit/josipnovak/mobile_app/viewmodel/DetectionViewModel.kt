@@ -26,7 +26,8 @@ import java.util.UUID
 
 class DetectionViewModel : ViewModel() {
     private val firestore = FirebaseFirestore.getInstance()
-    private val storage = FirebaseStorage.getInstance()
+    // Explicitly fetching the bucket directly from your google-services.json URL
+    private val storage = FirebaseStorage.getInstance("gs://fire-app-3ea13.firebasestorage.app")
     private val client = OkHttpClient()
 
     private val _records = MutableStateFlow<List<DetectionRecord>>(emptyList())
@@ -38,8 +39,11 @@ class DetectionViewModel : ViewModel() {
     private val _currentOriginalBitmap = MutableStateFlow<Bitmap?>(null)
     val currentOriginalBitmap: StateFlow<Bitmap?> = _currentOriginalBitmap.asStateFlow()
 
-    private val _currentResultBitmap = MutableStateFlow<Bitmap?>(null)
-    val currentResultBitmap: StateFlow<Bitmap?> = _currentResultBitmap.asStateFlow()
+    private val _currentMaskBitmap = MutableStateFlow<Bitmap?>(null)
+    val currentMaskBitmap: StateFlow<Bitmap?> = _currentMaskBitmap.asStateFlow()
+
+    private val _currentSegmentedBitmap = MutableStateFlow<Bitmap?>(null)
+    val currentSegmentedBitmap: StateFlow<Bitmap?> = _currentSegmentedBitmap.asStateFlow()
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
@@ -74,16 +78,34 @@ class DetectionViewModel : ViewModel() {
                     .build()
 
                 val request = Request.Builder()
-                    .url("http://192.168.64.112:8000/detect")
+                    .url("http://192.168.65.198:8000/detect")
                     .post(requestBody)
                     .build()
 
                 val response = client.newCall(request).execute()
                 if (response.isSuccessful) {
-                    val bytes = response.body?.bytes()
-                    if (bytes != null && bytes.isNotEmpty()) {
-                        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                        _currentResultBitmap.value = bitmap
+                    val jsonString = response.body?.string()
+                    if (!jsonString.isNullOrEmpty()) {
+                        try {
+                            val jsonObject = org.json.JSONObject(jsonString)
+                            
+                            val maskBase64 = jsonObject.optString("mask").substringAfter("base64,")
+                            val segmentedBase64 = jsonObject.optString("segmented_image").substringAfter("base64,")
+
+                            if (maskBase64.isNotEmpty() && segmentedBase64.isNotEmpty()) {
+                                val maskBytes = android.util.Base64.decode(maskBase64, android.util.Base64.DEFAULT)
+                                val maskBitmap = BitmapFactory.decodeByteArray(maskBytes, 0, maskBytes.size)
+                                _currentMaskBitmap.value = maskBitmap
+
+                                val segmentedBytes = android.util.Base64.decode(segmentedBase64, android.util.Base64.DEFAULT)
+                                val segmentedBitmap = BitmapFactory.decodeByteArray(segmentedBytes, 0, segmentedBytes.size)
+                                _currentSegmentedBitmap.value = segmentedBitmap
+                            } else {
+                                _errorMessage.value = "Missing image data in response"
+                            }
+                        } catch (e: Exception) {
+                            _errorMessage.value = "Failed to parse response: ${e.message}"
+                        }
                     } else {
                         _errorMessage.value = "Empty response from server"
                     }
@@ -100,7 +122,8 @@ class DetectionViewModel : ViewModel() {
 
     fun saveDetectionToFirebase(onSuccess: () -> Unit) {
         val original = _currentOriginalBitmap.value ?: return
-        val result = _currentResultBitmap.value ?: return // For simplicity, assume result is segmented/mask
+        val mask = _currentMaskBitmap.value ?: return
+        val segmented = _currentSegmentedBitmap.value ?: return
 
         viewModelScope.launch {
             _isLoading.value = true
@@ -109,15 +132,15 @@ class DetectionViewModel : ViewModel() {
                 
                 // Upload original
                 val originalUrl = uploadBitmap(original, "original_$id.jpg")
-                // Upload segmented/mask (Assuming current api returns combined or just one, saving same for now or split if available)
-                val resultUrl = uploadBitmap(result, "result_$id.jpg")
+                val maskUrl = uploadBitmap(mask, "mask_$id.png")
+                val segmentedUrl = uploadBitmap(segmented, "segmented_$id.png")
 
                 val record = DetectionRecord(
                     id = id,
                     timestamp = System.currentTimeMillis(),
                     originalImageUrl = originalUrl,
-                    maskImageUrl = resultUrl, // placeholder if mask and segmented are separated later
-                    segmentedImageUrl = resultUrl 
+                    maskImageUrl = maskUrl,
+                    segmentedImageUrl = segmentedUrl 
                 )
                 
                 firestore.collection("detections").document(id).set(record).await()
@@ -136,8 +159,15 @@ class DetectionViewModel : ViewModel() {
         bitmap.compress(Bitmap.CompressFormat.JPEG, 90, baos)
         val data = baos.toByteArray()
         val ref = storage.reference.child("images/$filename")
-        ref.putBytes(data).await()
-        return ref.downloadUrl.await().toString()
+        
+        // Let's add extra logging to ensure we catch precisely where it breaks
+        return try {
+            ref.putBytes(data).await()
+            ref.downloadUrl.await().toString()
+        } catch (e: Exception) {
+            Log.e("FirebaseUpload", "Failed to upload $filename: ${e.message}", e)
+            throw e
+        }
     }
 
     fun clearError() {
@@ -146,7 +176,8 @@ class DetectionViewModel : ViewModel() {
 
     fun resetCurrentDetection() {
         _currentOriginalBitmap.value = null
-        _currentResultBitmap.value = null
+        _currentMaskBitmap.value = null
+        _currentSegmentedBitmap.value = null
     }
 
     fun getRecordById(id: String): DetectionRecord? {

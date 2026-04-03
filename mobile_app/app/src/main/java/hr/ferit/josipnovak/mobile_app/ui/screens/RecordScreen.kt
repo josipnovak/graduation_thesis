@@ -28,7 +28,8 @@ fun RecordScreen(
     val context = LocalContext.current
     val isLoading by viewModel.isLoading.collectAsState()
     val originalBitmap by viewModel.currentOriginalBitmap.collectAsState()
-    val resultBitmap by viewModel.currentResultBitmap.collectAsState()
+    val maskBitmap by viewModel.currentMaskBitmap.collectAsState()
+    val segmentedBitmap by viewModel.currentSegmentedBitmap.collectAsState()
     val errorMsg by viewModel.errorMessage.collectAsState()
 
     val photoFile = remember { File(context.getExternalFilesDir(null), "fire_detection.jpg") }
@@ -65,20 +66,38 @@ fun RecordScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        if (originalBitmap != null && resultBitmap != null) {
-            Text("Original Image", style = MaterialTheme.typography.titleMedium)
-            Image(
-                bitmap = originalBitmap!!.asImageBitmap(),
-                contentDescription = "Original",
-                modifier = Modifier.fillMaxWidth().height(200.dp).border(1.dp, Color.Gray).padding(8.dp)
-            )
+        if (originalBitmap != null && maskBitmap != null && segmentedBitmap != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Original", style = MaterialTheme.typography.bodySmall)
+                    Image(
+                        bitmap = originalBitmap!!.asImageBitmap(),
+                        contentDescription = "Original",
+                        modifier = Modifier.fillMaxWidth().aspectRatio(1f).border(1.dp, Color.Gray).padding(4.dp)
+                    )
+                }
 
-            Text("Mask & Segmented", style = MaterialTheme.typography.titleMedium)
-            Image(
-                bitmap = resultBitmap!!.asImageBitmap(),
-                contentDescription = "Result",
-                modifier = Modifier.fillMaxWidth().height(200.dp).border(1.dp, Color.Gray).padding(8.dp)
-            )
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Mask", style = MaterialTheme.typography.bodySmall)
+                    Image(
+                        bitmap = maskBitmap!!.asImageBitmap(),
+                        contentDescription = "Mask",
+                        modifier = Modifier.fillMaxWidth().aspectRatio(1f).border(1.dp, Color.Gray).padding(4.dp)
+                    )
+                }
+
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Segmented", style = MaterialTheme.typography.bodySmall)
+                    Image(
+                        bitmap = segmentedBitmap!!.asImageBitmap(),
+                        contentDescription = "Segmented",
+                        modifier = Modifier.fillMaxWidth().aspectRatio(1f).border(1.dp, Color.Gray).padding(4.dp)
+                    )
+                }
+            }
 
             Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
                 Button(onClick = { 
