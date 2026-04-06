@@ -26,7 +26,6 @@ import java.util.UUID
 
 class DetectionViewModel : ViewModel() {
     private val firestore = FirebaseFirestore.getInstance()
-    // Explicitly fetching the bucket directly from your google-services.json URL
     private val storage = FirebaseStorage.getInstance("gs://fire-app-3ea13.firebasestorage.app")
     private val client = OkHttpClient()
 
@@ -36,6 +35,9 @@ class DetectionViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _isSaving = MutableStateFlow(false)
+    val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
+
     private val _currentOriginalBitmap = MutableStateFlow<Bitmap?>(null)
     val currentOriginalBitmap: StateFlow<Bitmap?> = _currentOriginalBitmap.asStateFlow()
 
@@ -44,6 +46,9 @@ class DetectionViewModel : ViewModel() {
 
     private val _currentSegmentedBitmap = MutableStateFlow<Bitmap?>(null)
     val currentSegmentedBitmap: StateFlow<Bitmap?> = _currentSegmentedBitmap.asStateFlow()
+
+    private val _fireDetected = MutableStateFlow<Boolean?>(null)
+    val fireDetected: StateFlow<Boolean?> = _fireDetected.asStateFlow()
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
@@ -92,6 +97,10 @@ class DetectionViewModel : ViewModel() {
                             val maskBase64 = jsonObject.optString("mask").substringAfter("base64,")
                             val segmentedBase64 = jsonObject.optString("segmented_image").substringAfter("base64,")
 
+                            if (jsonObject.has("fire_detected")) {
+                                _fireDetected.value = jsonObject.getBoolean("fire_detected")
+                            }
+
                             if (maskBase64.isNotEmpty() && segmentedBase64.isNotEmpty()) {
                                 val maskBytes = android.util.Base64.decode(maskBase64, android.util.Base64.DEFAULT)
                                 val maskBitmap = BitmapFactory.decodeByteArray(maskBytes, 0, maskBytes.size)
@@ -126,11 +135,10 @@ class DetectionViewModel : ViewModel() {
         val segmented = _currentSegmentedBitmap.value ?: return
 
         viewModelScope.launch {
-            _isLoading.value = true
+            _isSaving.value = true
             try {
                 val id = UUID.randomUUID().toString()
                 
-                // Upload original
                 val originalUrl = uploadBitmap(original, "original_$id.jpg")
                 val maskUrl = uploadBitmap(mask, "mask_$id.png")
                 val segmentedUrl = uploadBitmap(segmented, "segmented_$id.png")
@@ -149,7 +157,7 @@ class DetectionViewModel : ViewModel() {
             } catch (e: Exception) {
                 _errorMessage.value = "Failed to save to Firebase: ${e.message}"
             } finally {
-                _isLoading.value = false
+                _isSaving.value = false
             }
         }
     }
@@ -160,7 +168,6 @@ class DetectionViewModel : ViewModel() {
         val data = baos.toByteArray()
         val ref = storage.reference.child("images/$filename")
         
-        // Let's add extra logging to ensure we catch precisely where it breaks
         return try {
             ref.putBytes(data).await()
             ref.downloadUrl.await().toString()
@@ -178,6 +185,7 @@ class DetectionViewModel : ViewModel() {
         _currentOriginalBitmap.value = null
         _currentMaskBitmap.value = null
         _currentSegmentedBitmap.value = null
+        _fireDetected.value = null
     }
 
     fun getRecordById(id: String): DetectionRecord? {

@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -42,13 +43,16 @@ import java.io.FileOutputStream
 @Composable
 fun RecordScreen(
     viewModel: DetectionViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToHistory: () -> Unit
 ) {
     val context = LocalContext.current
     val isLoading by viewModel.isLoading.collectAsState()
+    val isSaving by viewModel.isSaving.collectAsState()
     val originalBitmap by viewModel.currentOriginalBitmap.collectAsState()
     val maskBitmap by viewModel.currentMaskBitmap.collectAsState()
     val segmentedBitmap by viewModel.currentSegmentedBitmap.collectAsState()
+    val fireDetected by viewModel.fireDetected.collectAsState()
     val errorMsg by viewModel.errorMessage.collectAsState()
 
     var fullScreenImageBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
@@ -84,7 +88,6 @@ fun RecordScreen(
 
     LaunchedEffect(errorMsg) {
         if (!errorMsg.isNullOrEmpty()) {
-            Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
             viewModel.clearError()
         }
     }
@@ -148,6 +151,16 @@ fun RecordScreen(
                             fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(16.dp))
+
+                        if (fireDetected != null) {
+                            Text(
+                                text = if (fireDetected == true) "Fire Detected!" else "No Fire Detected",
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
 
                         val images = listOf(
                             Pair("Original", originalBitmap!!),
@@ -215,23 +228,35 @@ fun RecordScreen(
 
                         Button(
                             onClick = {
-                                viewModel.saveDetectionToFirebase {
-                                    Toast.makeText(
-                                        context,
-                                        "Saved Successfully!",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    viewModel.resetCurrentDetection()
-                                    onNavigateBack()
+                                if (!isSaving) {
+                                    viewModel.saveDetectionToFirebase {
+                                        viewModel.resetCurrentDetection()
+                                        onNavigateToHistory()
+                                    }
                                 }
                             },
                             modifier = Modifier.fillMaxWidth().height(50.dp),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !isSaving
                         ) {
-                            Text(
-                                "Save Record to History",
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                            )
+                            if (isSaving) {
+
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Saving...",
+                                    fontWeight = FontWeight.Bold
+                                )
+                            } else {
+                                Text(
+                                    "Save Record to History",
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))
@@ -239,11 +264,12 @@ fun RecordScreen(
                         OutlinedButton(
                             onClick = { viewModel.resetCurrentDetection() },
                             modifier = Modifier.fillMaxWidth().height(50.dp),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !isSaving
                         ) {
                             Text(
                                 "Retry Detection",
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -273,7 +299,7 @@ fun RecordScreen(
                             Text(
                                 "Take a Picture",
                                 fontSize = MaterialTheme.typography.titleMedium.fontSize,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                fontWeight = FontWeight.Bold
                             )
                         }
 
@@ -313,7 +339,7 @@ fun RecordScreen(
                             Text(
                                 "Choose from Gallery",
                                 fontSize = MaterialTheme.typography.titleMedium.fontSize,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }

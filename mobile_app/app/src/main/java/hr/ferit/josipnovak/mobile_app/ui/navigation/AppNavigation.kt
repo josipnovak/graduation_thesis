@@ -25,7 +25,11 @@ fun AppNavigation(viewModel: DetectionViewModel = viewModel()) {
         composable("record") {
             RecordScreen(
                 viewModel = viewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToHistory = {
+                    navController.popBackStack()
+                    navController.navigate("history")
+                }
             )
         }
         composable("history") {
