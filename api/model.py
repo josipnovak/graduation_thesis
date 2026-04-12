@@ -127,15 +127,3 @@ history = model.fit(
 )
 
 model.save('model.h5')
-
-test_img = X_test[0:1]
-pred = model.predict(test_img)
-
-plt.figure(figsize=(10, 5))
-plt.subplot(1, 2, 1)
-plt.title("Original")
-plt.imshow(X_test[0])
-plt.subplot(1, 2, 2)
-plt.title("Predikcija vatre")
-plt.imshow(pred[0].squeeze(), cmap='hot')
-plt.show()

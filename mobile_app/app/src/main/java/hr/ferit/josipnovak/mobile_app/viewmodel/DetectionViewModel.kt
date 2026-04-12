@@ -83,7 +83,7 @@ class DetectionViewModel : ViewModel() {
                     .build()
 
                 val request = Request.Builder()
-                    .url("http://192.168.0.4:8000/detect")
+                    .url("https://unpoliced-ray-cisted.ngrok-free.dev/detect")
                     .post(requestBody)
                     .build()
 
