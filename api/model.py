@@ -117,13 +117,18 @@ early_stop = tf.keras.callbacks.EarlyStopping(
     verbose=1
 )
 
+fire_pixels = np.sum(y_train)
+total_pixels = y_train.size
+class_weight = {0: fire_pixels / total_pixels, 1: 1.0}
+
 history = model.fit(
     train_dataset,
     steps_per_epoch=len(X_train) // BATCH_SIZE,
     epochs=EPOCHS,
     validation_data=(X_test, y_test),
-    callbacks=[early_stop],  
+    callbacks=[early_stop],
+    class_weight=class_weight,
     verbose=1
 )
 
-model.save('model.h5')
+model.save('model_class_weighted.h5')

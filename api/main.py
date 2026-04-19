@@ -8,9 +8,9 @@ import os
 
 app = FastAPI()
 
-MODEL_PATH = "model.h5"  
+MODEL_PATH = "model_class_weighted.h5"  
 IMG_SIZE = (256, 256)                
-THRESHOLD = 0.6
+THRESHOLD = 0.4
 
 if os.path.exists(MODEL_PATH):
     try:
