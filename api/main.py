@@ -8,7 +8,7 @@ import os
 
 app = FastAPI()
 
-MODEL_PATH = "new_model_skip_connections.h5"  
+MODEL_PATH = "---"  
 IMG_SIZE = (256, 256)                
 THRESHOLD = 0.6
 
