@@ -8,9 +8,9 @@ import os
 
 app = FastAPI()
 
-MODEL_PATH = "model_class_weighted.h5"  
+MODEL_PATH = "new_model_skip_connections.h5"  
 IMG_SIZE = (256, 256)                
-THRESHOLD = 0.4
+THRESHOLD = 0.6
 
 if os.path.exists(MODEL_PATH):
     try:

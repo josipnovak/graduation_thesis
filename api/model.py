@@ -13,7 +13,7 @@ if sys.stdout.encoding != 'utf-8':
 IMG_SIZE = (256, 256)
 BATCH_SIZE = 8  
 EPOCHS = 25
-DATASET_PATH = r'---' 
+DATASET_PATH = "---"  
 
 def load_data(img_dir, mask_dir):
     images = []
@@ -25,19 +25,18 @@ def load_data(img_dir, mask_dir):
     img_names = sorted(os.listdir(img_dir))
     mask_names = sorted(os.listdir(mask_dir))
     
-    
     for i in range(len(img_names)):
         img = cv2.imread(os.path.join(img_dir, img_names[i]))
         if img is None: continue
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = cv2.resize(img, IMG_SIZE)
-        images.append(img / 255.0) 
+        images.append(img / 255.0)
         
         mask = cv2.imread(os.path.join(mask_dir, mask_names[i]), cv2.IMREAD_GRAYSCALE)
         if mask is None: continue
         mask = cv2.resize(mask, IMG_SIZE)
         mask = np.expand_dims(mask, axis=-1)
-        mask = (mask > 0).astype(np.float32) 
+        mask = (mask > 0).astype(np.float32)
         masks.append(mask)
         
     return np.array(images), np.array(masks)
@@ -56,33 +55,36 @@ data_gen_args = dict(rotation_range=15,
                      horizontal_flip=True,
                      fill_mode='nearest')
 
-image_datagen = tf.keras.preprocessing.image.ImageDataGenerator(**data_gen_args)
-mask_datagen = tf.keras.preprocessing.image.ImageDataGenerator(**data_gen_args)
-
-seed = 42
-image_generator = image_datagen.flow(X_train, batch_size=BATCH_SIZE, seed=seed)
-mask_generator = mask_datagen.flow(y_train, batch_size=BATCH_SIZE, seed=seed)
-train_generator = zip(image_generator, mask_generator)
-
 def unet():
     inputs = layers.Input((256, 256, 3))
-    
-    c1 = layers.Conv2D(32, (3, 3), activation='relu', padding='same')(inputs)
+
+    c1 = layers.Conv2D(32, (3, 3), padding='same')(inputs)
+    c1 = layers.BatchNormalization()(c1)
+    c1 = layers.Activation('relu')(c1)
     p1 = layers.MaxPooling2D((2, 2))(c1)
-    
-    c2 = layers.Conv2D(64, (3, 3), activation='relu', padding='same')(p1)
+
+    c2 = layers.Conv2D(64, (3, 3), padding='same')(p1)
+    c2 = layers.BatchNormalization()(c2)
+    c2 = layers.Activation('relu')(c2)
     p2 = layers.MaxPooling2D((2, 2))(c2)
-    
-    c3 = layers.Conv2D(128, (3, 3), activation='relu', padding='same')(p2)
-    
+
+    c3 = layers.Conv2D(128, (3, 3), padding='same')(p2)
+    c3 = layers.BatchNormalization()(c3)
+    c3 = layers.Activation('relu')(c3)
+    c3 = layers.Dropout(0.3)(c3)
+
     u4 = layers.Conv2DTranspose(64, (2, 2), strides=(2, 2), padding='same')(c3)
     u4 = layers.concatenate([u4, c2])
-    c4 = layers.Conv2D(64, (3, 3), activation='relu', padding='same')(u4)
-    
+    c4 = layers.Conv2D(64, (3, 3), padding='same')(u4)
+    c4 = layers.BatchNormalization()(c4)
+    c4 = layers.Activation('relu')(c4)
+
     u5 = layers.Conv2DTranspose(32, (2, 2), strides=(2, 2), padding='same')(c4)
     u5 = layers.concatenate([u5, c1])
-    c5 = layers.Conv2D(32, (3, 3), activation='relu', padding='same')(u5)
-    
+    c5 = layers.Conv2D(32, (3, 3), padding='same')(u5)
+    c5 = layers.BatchNormalization()(c5)
+    c5 = layers.Activation('relu')(c5)
+
     outputs = layers.Conv2D(1, (1, 1), activation='sigmoid')(c5)
     return models.Model(inputs, outputs)
 
@@ -93,14 +95,12 @@ image_datagen = tf.keras.preprocessing.image.ImageDataGenerator(**data_gen_args)
 mask_datagen = tf.keras.preprocessing.image.ImageDataGenerator(**data_gen_args)
 
 seed = 42
-
 image_generator = image_datagen.flow(X_train, batch_size=BATCH_SIZE, seed=seed)
 mask_generator = mask_datagen.flow(y_train, batch_size=BATCH_SIZE, seed=seed)
 
 def train_generator_fn():
     for img, mask in zip(image_generator, mask_generator):
         yield img, mask
-
 
 train_dataset = tf.data.Dataset.from_generator(
     train_generator_fn,
@@ -111,8 +111,8 @@ train_dataset = tf.data.Dataset.from_generator(
 )
 
 early_stop = tf.keras.callbacks.EarlyStopping(
-    monitor='val_loss', 
-    patience=5, 
+    monitor='val_loss',
+    patience=5,
     restore_best_weights=True,
     verbose=1
 )
@@ -131,4 +131,4 @@ history = model.fit(
     verbose=1
 )
 
-model.save('model_class_weighted.h5')
+model.save('model.h5')
