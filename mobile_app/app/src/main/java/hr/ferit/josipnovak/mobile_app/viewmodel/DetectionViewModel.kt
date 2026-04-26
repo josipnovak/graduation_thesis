@@ -162,6 +162,34 @@ class DetectionViewModel : ViewModel() {
         }
     }
 
+    fun deleteDetection(id: String, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val storageRef = storage.reference
+                val originalRef = storageRef.child("images/original_$id.jpg")
+                val maskRef = storageRef.child("images/mask_$id.png")
+                val segmentedRef = storageRef.child("images/segmented_$id.png")
+
+                try { originalRef.delete().await() } catch (e: Exception) { Log.e("FirebaseDelete", "Failed to delete original", e) }
+                try { maskRef.delete().await() } catch (e: Exception) { Log.e("FirebaseDelete", "Failed to delete mask", e) }
+                try { segmentedRef.delete().await() } catch (e: Exception) { Log.e("FirebaseDelete", "Failed to delete segmented", e) }
+
+                firestore.collection("detections").document(id).delete().await()
+
+                _records.value = _records.value.filter { it.id != id }
+
+                withContext(Dispatchers.Main) { 
+                    onSuccess() 
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "Failed to delete record: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     private suspend fun uploadBitmap(bitmap: Bitmap, filename: String): String {
         val baos = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.JPEG, 90, baos)
