@@ -55,6 +55,8 @@ fun RecordScreen(
     val fireDetected by viewModel.fireDetected.collectAsState()
     val errorMsg by viewModel.errorMessage.collectAsState()
 
+    var threshold by remember { mutableFloatStateOf(0.6f) }
+    var currentFile by remember { mutableStateOf<File?>(null) }
     var fullScreenImageBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
 
     val photoFile = remember { File(context.getExternalFilesDir(null), "fire_detection.jpg") }
@@ -69,7 +71,8 @@ fun RecordScreen(
     val cameraLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
             if (success) {
-                viewModel.processImage(photoFile)
+                currentFile = photoFile
+                viewModel.processImage(photoFile, threshold)
             }
         }
 
@@ -82,7 +85,8 @@ fun RecordScreen(
                 inputStream?.copyTo(outputStream)
                 inputStream?.close()
                 outputStream.close()
-                viewModel.processImage(file)
+                currentFile = file
+                viewModel.processImage(file, threshold)
             }
         }
 
@@ -98,7 +102,7 @@ fun RecordScreen(
                 title = {
                     Text(
                         "Upload & Detect",
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
@@ -148,7 +152,7 @@ fun RecordScreen(
                             "Detection Results",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -157,7 +161,7 @@ fun RecordScreen(
                                 text = if (fireDetected == true) "Fire Detected!" else "No Fire Detected",
                                 color = Color.White,
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold
+                                fontWeight = FontWeight.ExtraBold
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                         }
@@ -342,6 +346,25 @@ fun RecordScreen(
                                 fontWeight = FontWeight.Bold
                             )
                         }
+
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Text(
+                            text = "Threshold",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(String.format("%.2f", threshold), style = MaterialTheme.typography.bodyMedium)
+                        Slider(
+                            value = threshold,
+                            onValueChange = { threshold = kotlin.math.round(it * 20f) / 20f },
+                            valueRange = 0f..1f,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(24.dp)
+                        )
+
                     }
                 }
             }

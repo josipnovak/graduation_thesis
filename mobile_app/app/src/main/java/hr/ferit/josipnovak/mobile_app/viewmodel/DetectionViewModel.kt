@@ -70,7 +70,7 @@ class DetectionViewModel : ViewModel() {
         }
     }
 
-    fun processImage(file: File) {
+    fun processImage(file: File, threshold: Float = 0.6f) {
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
             try {
@@ -81,9 +81,9 @@ class DetectionViewModel : ViewModel() {
                     .setType(MultipartBody.FORM)
                     .addFormDataPart("file", file.name, file.asRequestBody("image/jpeg".toMediaTypeOrNull()))
                     .build()
-
+                Log.d("DetectionViewModel", "Sending request to server with file: ${file.name} and threshold: $threshold")
                 val request = Request.Builder()
-                    .url("http://10.121.0.188:8000/detect")
+                    .url("http://192.168.0.9:8000/detect?threshold=$threshold")
                     .post(requestBody)
                     .build()
 

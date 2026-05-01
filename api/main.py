@@ -8,9 +8,8 @@ import os
 
 app = FastAPI()
 
-MODEL_PATH = "---"  
-IMG_SIZE = (256, 256)                
-THRESHOLD = 0.6
+MODEL_PATH = "model.h5"  
+IMG_SIZE = (256, 256)
 
 if os.path.exists(MODEL_PATH):
     try:
@@ -23,7 +22,7 @@ async def root():
     return {"status": "online", "model": MODEL_PATH, "info": "/docs "}
 
 @app.post("/detect")
-async def detect_fire(file: UploadFile = File(...)):
+async def detect_fire(file: UploadFile = File(...), threshold: float = 0.6):
     try:
         contents = await file.read()
         nparr = np.frombuffer(contents, np.uint8)
@@ -45,7 +44,7 @@ async def detect_fire(file: UploadFile = File(...)):
             prediction = prediction[:, :, 0]
 
         prediction_resized = cv2.resize(prediction, (original_w, original_h), interpolation=cv2.INTER_LINEAR)
-        mask_final = (prediction_resized > THRESHOLD).astype(np.uint8) * 255
+        mask_final = (prediction_resized > threshold).astype(np.uint8) * 255
         
         segmented = img.copy()
         red_overlay = np.zeros_like(img)
