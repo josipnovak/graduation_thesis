@@ -77,9 +77,9 @@ fun DetailsScreen(
                 }
             } else {
                 val images = listOf(
-                    Pair("Original Image", record.originalImageUrl),
+                    Pair("Segmented Image", record.segmentedImageUrl),
                     Pair("Mask Image", record.maskImageUrl),
-                    Pair("Segmented Image", record.segmentedImageUrl)
+                    Pair("Original Image", record.originalImageUrl)
                 )
 
                 val pagerState = rememberPagerState(pageCount = { images.size })

@@ -167,9 +167,9 @@ fun RecordScreen(
                         }
 
                         val images = listOf(
-                            Pair("Original", originalBitmap!!),
+                            Pair("Target", segmentedBitmap!!),
                             Pair("Mask", maskBitmap!!),
-                            Pair("Target", segmentedBitmap!!)
+                            Pair("Original", originalBitmap!!)
                         )
 
                         val pagerState = rememberPagerState(pageCount = { images.size })
